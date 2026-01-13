@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Spin Wheel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<style>
+  body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.machine {
+  position: relative;
+  width: 90vw;          /* scale to viewport width */
+  max-width: 400px;     /* cap size on large screens */
+}
+
+.wheel-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;    /* maintain square aspect ratio */
+}
+
+#wheel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  z-index: 2;
+  filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.4)); /* soft shadow */
+}
+
+#cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 3;
+  pointer-events: none;
+  filter: drop-shadow(0px 6px 12px rgba(0,0,0,0.5)); /* deeper shadow */
+}
+
+#handle {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  z-index: 1;
+  width: 100px;
+  height: auto;
+  filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.5)); /* subtle shadow */
+}
+
+/* 📱 Mobile tweaks */
+@media (max-width: 480px) {
+  .machine {
+    width: 95vw;        /* use almost full width */
+  }
+  #handle {
+    width: 30%;         /* slightly larger handle on small screens */
+    top: -25%;
+  }
+}
+</style>
+
+<body>
+  <div class="machine">
+    <img src="Build/handle.png" id="handle" />
+    
+    <div class="wheel-wrapper">
+      <img src="Build/wheel.png" id="wheel" />
+      <img src="Build/cover.png" id="cover" />
+    </div>
+  </div>
+  
+  <script>
+    const handle = document.getElementById("handle");
+    const wheel = document.getElementById("wheel");
+    
+    let spinning = false;
+    let currentRotation = 0;
+    
+    const TOTAL_SEGMENTS = 6;
+    const SEGMENT_ANGLE = 360 / TOTAL_SEGMENTS;
+    const MIN_SPIN_TIME = 2000; // 2 seconds minimum
+    
+    handle.addEventListener("click", () => {
+      if (spinning) return;
+      spinning = true;
+      
+      // Handle press down animation: move down and go beneath cover
+      handle.style.transform = "translateX(-50%) translateY(40px)";
+      handle.style.zIndex = "1"; // beneath cover
+      
+      // Choose random segment
+      const randomIndex = Math.floor(Math.random() * TOTAL_SEGMENTS);
+      const targetStopAngle = randomIndex * SEGMENT_ANGLE;
+      
+      // Calculate total rotation needed for at least 2 seconds
+      const initialSpeed = 720; // degrees per second
+      const deceleration = 400; // degrees per second squared
+      
+      const t = MIN_SPIN_TIME / 1000;
+      const totalRotation = (initialSpeed * t) - (0.5 * deceleration * t * t);
+      
+      const fullRotations = Math.floor(totalRotation / 360);
+      const remainingDegrees = totalRotation % 360;
+      
+      const currentMod = currentRotation % 360;
+      let angleDifference = targetStopAngle - ((currentMod + remainingDegrees) % 360);
+      if (angleDifference < 0) angleDifference += 360;
+      
+      const finalRotation = currentRotation + (fullRotations * 360) + remainingDegrees + angleDifference;
+      
+      // Apply the animation with custom timing function
+      wheel.style.transition = `transform ${MIN_SPIN_TIME}ms cubic-bezier(0.2, 0.1, 0.1, 1)`;
+      wheel.style.transform = `translate(-50%, -50%) rotate(${finalRotation}deg)`;
+      
+      currentRotation = finalRotation;
+      
+      // Reset handle immediately: move back up and restore above cover
+      setTimeout(() => {
+        handle.style.transform = "translateX(-50%) translateY(0)";
+        handle.style.zIndex = "3"; // back above cover
+      }, 150);
+      
+      // Unlock after spin completes
+      setTimeout(() => {
+        spinning = false;
+        console.log("Result index:", randomIndex);
+        console.log("Landed on segment at angle:", targetStopAngle);
+      }, MIN_SPIN_TIME);
+    });
+  </script>
+</body>
+</html>
